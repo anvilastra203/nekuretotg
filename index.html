@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Свобода — помощник бросить курить</title>
+<meta name="description" content="Счётчик прогресса, дневник тяги, экономия денег и восстановление организма.">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{
+  --bg:#0b1220; --bg2:#101a2c; --card:#151f33; --card2:#1b273e;
+  --line:#26334d; --text:#e8eef8; --muted:#93a4c0;
+  --accent:#2dd4bf; --accent2:#0f766e; --warn:#fb923c;
+  --danger:#f87171; --ok:#34d399; --radius:16px;
+  --tab-h:60px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  background:var(--bg); color:var(--text); line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+  background-image:radial-gradient(600px 340px at 12% -8%,rgba(45,212,191,.14),transparent 62%),
+                   radial-gradient(500px 300px at 95% 0%,rgba(56,189,248,.08),transparent 62%);
+  background-repeat:no-repeat;
+}
+h1,h2,h3{line-height:1.22;letter-spacing:-.02em}
+button,input,select,textarea{font-family:inherit}
+
+/* ================= boot ================= */
+#boot{
+  position:fixed;inset:0;display:grid;place-items:center;
+  background:var(--bg);z-index:500;
+}
+#boot .sp{
+  width:38px;height:38px;border-radius:50%;
+  border:3px solid var(--line);border-top-color:var(--accent);
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ================= topbar ================= */
+.topbar{
+  position:sticky;top:0;z-index:60;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:calc(10px + env(safe-area-inset-top)) 16px 10px;
+  background:rgba(11,18,32,.9);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--line);
+}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:16.5px;min-width:0}
+.brand .dot{
+  width:28px;height:28px;border-radius:9px;flex:0 0 auto;
+  background:linear-gradient(135deg,var(--accent),#38bdf8);
+  display:grid;place-items:center;font-size:15px;
+}
+.brand span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip{
+  display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;
+  font-size:13px;font-weight:600;color:var(--accent);
+  background:rgba(45,212,191,.11);border:1px solid rgba(45,212,191,.26);
+  padding:5px 11px;border-radius:999px;
+}
+.icon-btn{
+  width:36px;height:36px;flex:0 0 auto;border-radius:11px;
+  border:1px solid var(--line);background:var(--card);color:var(--muted);
+  display:grid;place-items:center;font-size:16px;cursor:pointer;
+}
+.icon-btn:active{transform:scale(.94)}
+
+/* ================= layout ================= */
+main{
+  padding:16px 14px calc(var(--tab-h) + 34px + env(safe-area-inset-bottom));
+  max-width:640px;margin:0 auto;
+}
+.view{display:none}
+.view.active{display:block;animation:fade .22s ease}
+@keyframes fade{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+
+/* ================= cards ================= */
+.card{
+  background:var(--card);border:1px solid var(--line);
+  border-radius:var(--radius);padding:18px;margin-bottom:14px;
+}
+.card h3{font-size:16.5px;margin-bottom:8px}
+.card p{color:var(--muted);font-size:14.5px}
+.sec-title{font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;margin:22px 0 10px}
+.sec-title:first-child{margin-top:0}
+
+/* ================= hero counter ================= */
+.hero-stat{
+  background:linear-gradient(150deg,rgba(45,212,191,.16),rgba(56,189,248,.05));
+  border:1px solid rgba(45,212,191,.3);border-radius:var(--radius);
+  padding:22px 18px;text-align:center;margin-bottom:14px;
+}
+.hero-stat .v{
+  font-size:clamp(30px,9vw,42px);font-weight:800;color:var(--accent);
+  font-variant-numeric:tabular-nums;letter-spacing:-.03em;
+}
+.hero-stat .l{color:var(--muted);font-size:13.5px;margin-top:7px}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{
+  background:var(--card);border:1px solid var(--line);
+  border-radius:13px;padding:14px 12px;text-align:center;
+}
+.stat .v{font-size:21px;font-weight:750;color:var(--accent);letter-spacing:-.02em}
+.stat .v.warn{color:var(--warn)}
+.stat .l{font-size:11.5px;color:var(--muted);margin-top:4px}
+
+/* ================= timeline ================= */
+.timeline{display:flex;flex-direction:column;gap:8px}
+.tl-item{
+  display:flex;gap:12px;align-items:flex-start;
+  padding:12px 13px;background:var(--card);
+  border:1px solid var(--line);border-radius:12px;
+  opacity:.4;transition:.3s;
+}
+.tl-item.done{opacity:1;border-color:rgba(52,211,153,.35);background:rgba(52,211,153,.06)}
+.tl-mark{
+  width:20px;height:20px;border-radius:50%;flex:0 0 auto;
+  border:2px solid var(--line);display:grid;place-items:center;
+  font-size:11px;margin-top:2px;color:transparent;
+}
+.tl-item.done .tl-mark{background:var(--ok);border-color:var(--ok);color:#052b27}
+.tl-body b{display:block;font-size:14.5px;font-weight:600}
+.tl-body span{font-size:13px;color:var(--muted)}
+
+/* ================= buttons ================= */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:13px 20px;border-radius:12px;border:0;cursor:pointer;
+  font-size:15px;font-weight:650;transition:transform .1s ease,filter .12s ease;
+}
+.btn:active{transform:scale(.975)}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#22c1a8);color:#052b27}
+.btn-ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+.btn-warn{background:var(--warn);color:#3d1a00}
+.btn-danger{background:rgba(248,113,113,.12);color:var(--danger);border:1px solid rgba(248,113,113,.35)}
+.btn-block{width:100%}
+.btn-sm{padding:10px 15px;font-size:14px;border-radius:10px}
+.btn-row{display:flex;gap:9px;flex-wrap:wrap}
+
+/* ================= breathing ================= */
+.sos{text-align:center;padding:6px 0}
+.breath{
+  width:min(200px,58vw);aspect-ratio:1;border-radius:50%;margin:22px auto;
+  border:2px solid rgba(45,212,191,.35);display:grid;place-items:center;
+  background:radial-gradient(circle,rgba(45,212,191,.16),transparent 70%);
+  transition:transform 4s ease-in-out;
+}
+.breath.inhale{transform:scale(1.15)}
+.breath.exhale{transform:scale(.87)}
+.breath .inner{font-size:32px;font-weight:750;color:var(--accent);font-variant-numeric:tabular-nums}
+.breath .ph{font-size:13px;color:var(--muted);margin-top:3px}
+.sos-actions{display:flex;flex-direction:column;gap:9px;margin-top:6px}
+
+/* ================= forms ================= */
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-weight:550}
+input[type=text],input[type=number],input[type=date],select,textarea{
+  width:100%;padding:12px 13px;border-radius:11px;
+  border:1px solid var(--line);background:var(--bg);color:var(--text);
+  font-size:16px; /* 16px чтобы iOS не зумил */
+  appearance:none;
+}
+select{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:36px}
+input:focus,select:focus{outline:none;border-color:var(--accent)}
+.hint{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+
+/* ================= chips ================= */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.chip-btn{
+  padding:8px 14px;border-radius:999px;border:1px solid var(--line);
+  background:var(--card);color:var(--muted);cursor:pointer;font-size:13.5px;
+  transition:.14s;
+}
+.chip-btn.on{background:rgba(251,146,60,.15);border-color:var(--warn);color:var(--warn);font-weight:600}
+.note{
+  background:var(--card2);border-left:3px solid var(--accent);
+  border-radius:9px;padding:11px 13px;font-size:13.5px;color:var(--muted);
+  margin-top:8px;line-height:1.55;
+}
+.note b{color:var(--text)}
+
+/* ================= log rows ================= */
+.log-item{
+  display:flex;gap:11px;align-items:flex-start;
+  padding:11px 0;border-bottom:1px solid var(--line);font-size:14px;
+}
+.log-item:last-child{border-bottom:0}
+.log-item .t{font-size:12px;color:var(--muted);white-space:nowrap;padding-top:2px;font-variant-numeric:tabular-nums}
+.log-item .b{flex:1;min-width:0}
+.log-item .b b{display:block;font-weight:600;font-size:14px}
+.log-item .b span{font-size:12.5px;color:var(--muted)}
+.pill{font-size:11.5px;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.pill.ok{background:rgba(52,211,153,.13);color:var(--ok)}
+.pill.bad{background:rgba(248,113,113,.13);color:var(--danger)}
+.empty{color:var(--muted);font-size:14px;padding:16px 0;text-align:center;line-height:1.6}
+
+/* ================= money ================= */
+.jar{
+  background:linear-gradient(160deg,rgba(45,212,191,.14),rgba(56,189,248,.05));
+  border:1px solid rgba(45,212,191,.28);border-radius:var(--radius);
+  padding:22px 18px;text-align:center;margin-bottom:14px;
+}
+.jar .sum{font-size:clamp(30px,8.5vw,40px);font-weight:800;color:var(--accent);letter-spacing:-.03em}
+.jar .sub{color:var(--muted);font-size:13.5px;margin-top:7px}
+.wish{
+  display:flex;justify-content:space-between;align-items:center;gap:12px;
+  background:var(--card);border:1px solid var(--line);
+  border-radius:12px;padding:12px 14px;margin-bottom:9px;
+}
+.wish.afford{border-color:rgba(52,211,153,.45);background:rgba(52,211,153,.07)}
+.wish b{font-weight:600;font-size:14.5px;display:block}
+.wish .meta{font-size:12.5px;color:var(--muted);margin-top:2px}
+.wish .pr{font-size:14px;color:var(--muted);white-space:nowrap;font-weight:600}
+.wish.afford .pr{color:var(--ok)}
+.prog{height:5px;border-radius:3px;background:var(--line);margin-top:8px;overflow:hidden}
+.prog i{display:block;height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:3px;transition:width .4s}
+.money-row{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line);font-size:14.5px}
+.money-row:last-child{border-bottom:0}
+.money-row span:last-child{color:var(--accent);font-weight:650;font-variant-numeric:tabular-nums}
+
+/* ================= bars ================= */
+.bars{display:flex;align-items:flex-end;gap:4px;height:120px;margin-top:14px}
+.bar-col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:5px;height:100%}
+.bar{width:100%;border-radius:4px 4px 0 0;min-height:3px;transition:height .4s ease}
+.bar-lbl{font-size:9.5px;color:var(--muted);writing-mode:horizontal-tb}
+
+/* ================= tabbar ================= */
+.tabbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:70;
+  display:grid;grid-template-columns:repeat(5,1fr);
+  background:rgba(13,20,34,.94);backdrop-filter:blur(16px);
+  border-top:1px solid var(--line);
+  padding:7px 4px calc(7px + env(safe-area-inset-bottom));
+}
+.tabbar button{
+  background:none;border:0;cursor:pointer;color:var(--muted);
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  font-size:10.5px;font-weight:550;padding:4px 0;border-radius:10px;
+}
+.tabbar button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.tabbar button.active{color:var(--accent)}
+.tabbar button:active{transform:scale(.93)}
+
+/* ================= overlays ================= */
+.sheet{
+  position:fixed;inset:0;z-index:200;background:rgba(6,10,18,.85);
+  backdrop-filter:blur(8px);display:none;overflow-y:auto;
+  padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));
+}
+.sheet.open{display:block;animation:fade .2s ease}
+.sheet-inner{max-width:480px;margin:0 auto;background:var(--bg2);border:1px solid var(--line);border-radius:20px;padding:22px}
+.sheet h2{font-size:21px;margin-bottom:8px}
+.sheet .sub{color:var(--muted);font-size:14px;margin-bottom:20px;line-height:1.55}
+.steps-bar{display:flex;gap:5px;margin-bottom:20px}
+.steps-bar i{height:4px;flex:1;border-radius:2px;background:var(--line)}
+.steps-bar i.on{background:var(--accent)}
+.ob-page[hidden]{display:none}
+.ob-actions{display:flex;gap:10px;margin-top:22px}
+.ob-actions .btn{flex:1}
+.method-step{margin-bottom:16px}
+.method-step b{font-size:15px;display:block;margin-bottom:3px}
+.method-step span{font-size:13.5px;color:var(--muted);line-height:1.6}
+ul.tick{margin:8px 0 0 18px;font-size:13.5px;color:var(--muted);line-height:1.6}
+ul.tick li{margin-bottom:6px}
+
+/* ================= toast ================= */
+#toast{
+  position:fixed;left:50%;bottom:calc(var(--tab-h) + 26px + env(safe-area-inset-bottom));
+  transform:translateX(-50%) translateY(90px);
+  background:var(--accent);color:#052b27;
+  padding:12px 22px;border-radius:12px;font-weight:650;font-size:14px;
+  z-index:300;opacity:0;transition:.28s;pointer-events:none;
+  max-width:calc(100vw - 32px);text-align:center;
+}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+</style>
+</head>
+<body>
+
+<div id="boot"><div class="sp"></div></div>
+
+<div class="topbar">
+  <div class="brand"><span class="dot">🌿</span><span id="brand-name">Свобода</span></div>
+  <div class="chip" id="quotient" style="display:none">—</div>
+  <button class="icon-btn" id="btn-share" title="Поделиться">↗</button>
+</div>
+
+<main>
+
+<!-- ============ ПРОГРЕСС ============ -->
+<section class="view active" id="v-progress">
+  <div class="hero-stat">
+    <div class="v" id="c-live">—</div>
+    <div class="l" id="c-caption">без сигарет</div>
+  </div>
+
+  <div class="grid2">
+    <div class="stat"><div class="v" id="c-cigs">0</div><div class="l">сигарет не выкурено</div></div>
+    <div class="stat"><div class="v" id="c-money">0 ₽</div><div class="l">сэкономлено</div></div>
+    <div class="stat"><div class="v" id="c-life">0 ч</div><div class="l">жизни вернули</div></div>
+    <div class="stat"><div class="v" id="c-streak">0</div><div class="l">дней без срыва</div></div>
+  </div>
+
+  <div class="sec-title">Восстановление организма</div>
+  <div class="card" id="timeline-card">
+    <p style="margin-bottom:14px">Отсчёт от момента отказа. Зелёным — то, что уже произошло.</p>
+    <div class="timeline" id="timeline"></div>
+  </div>
+</section>
+
+<!-- ============ SOS ============ -->
+<section class="view" id="v-sos">
+  <div class="card sos">
+    <h3>Тяга накрывает?</h3>
+    <p style="max-width:340px;margin:6px auto 0">Дышите вместе с кругом: вдох носом 4 сек, задержка 7, выдох ртом 8. Тяга уходит за 3–5 минут.</p>
+    <div class="breath" id="breath">
+      <div>
+        <div class="inner" id="breath-count">‹</div>
+        <div class="ph" id="breath-phase">Начать</div>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-block" id="breath-btn">Начать дыхание</button>
+
+    <div class="sos-actions" style="margin-top:20px">
+      <button class="btn btn-ghost btn-block" onclick="saveCraving(1)">✓ Пережил — было легко</button>
+      <button class="btn btn-ghost btn-block" onclick="saveCraving(2)">💪 Пережил — было тяжело</button>
+      <button class="btn btn-danger btn-block" onclick="saveCraving(3)">Курнул</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ДНЕВНИК ============ -->
+<section class="view" id="v-log">
+  <div class="card">
+    <h3>Записать эпизод</h3>
+    <p style="margin-bottom:14px">Даже если не курили — запись важна. Так видны ваши паттерны.</p>
+    <div class="field">
+      <label>Что происходило вокруг?</label>
+      <input type="text" id="log-context" placeholder="Пил кофе, был в машине, разозлился...">
+    </div>
+    <div class="field">
+      <label>Сила тяги</label>
+      <div class="chips" id="intensity-chips" style="margin:0">
+        <button class="chip-btn" data-i="1">1 — слабо</button>
+        <button class="chip-btn on" data-i="2">2 — средне</button>
+        <button class="chip-btn" data-i="3">3 — сильно</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Чем справились?</label>
+      <select id="log-method">
+        <option>Дыхание 4–7–8</option>
+        <option>Вода или жвачка</option>
+        <option>Отвлёкся на дело</option>
+        <option>Прогулка</option>
+        <option>Хотел удержаться, но не смог</option>
+      </select>
+    </div>
+    <button class="btn btn-primary btn-block btn-sm" onclick="addLog()">Добавить запись</button>
+  </div>
+
+  <div class="card">
+    <h3>Мои триггеры</h3>
+    <p>Отметьте свои — на каждый будет готовый ответ.</p>
+    <div class="chips" id="trigger-chips"></div>
+    <div id="trigger-advice"></div>
+  </div>
+
+  <div class="sec-title">История</div>
+  <div class="card" id="log-area"></div>
+</section>
+
+<!-- ============ ДЕНЬГИ ============ -->
+<section class="view" id="v-money">
+  <div class="jar">
+    <div class="sub" style="margin-top:0;margin-bottom:6px">Вы уже вернули себе</div>
+    <div class="sum" id="m-saved">0 ₽</div>
+    <div class="sub">Это <b id="m-cigs" style="color:var(--text)">0</b> невыкуренных сигарет</div>
+  </div>
+
+  <div class="card">
+    <h3>Копилка желаний</h3>
+    <p style="margin-bottom:12px">Заведите цель — деньги станут видимыми.</p>
+    <div class="field">
+      <label>Что хотите купить?</label>
+      <input type="text" id="wish-name" placeholder="Наушники, поездка на море...">
+    </div>
+    <div class="row2">
+      <div class="field" style="margin-bottom:0"><label>Цена, ₽</label><input type="number" id="wish-price" placeholder="15000" min="1" inputmode="numeric"></div>
+      <div class="field" style="margin-bottom:0;display:flex;align-items:flex-end">
+        <button class="btn btn-primary btn-sm btn-block" onclick="addWish()">Добавить</button>
+      </div>
+    </div>
+    <div style="margin-top:16px" id="wishlist"></div>
+  </div>
+
+  <div class="card">
+    <h3>Куда уходят деньги</h3>
+    <div id="money-rows"></div>
+  </div>
+</section>
+
+<!-- ============ СТАТИСТИКА ============ -->
+<section class="view" id="v-stats">
+  <div class="grid2">
+    <div class="stat"><div class="v" id="s-total">0</div><div class="l">эпизодов тяги</div></div>
+    <div class="stat"><div class="v" id="s-won">—</div><div class="l">пережито без сигареты</div></div>
+    <div class="stat"><div class="v" id="s-risk">—</div><div class="l">опасные часы</div></div>
+    <div class="stat"><div class="v warn" id="s-trig">—</div><div class="l">главный триггер</div></div>
+  </div>
+
+  <div class="card">
+    <h3>Тяга по дням</h3>
+    <p>Высота столбца — эпизоды. Красные — где курили.</p>
+    <div class="bars" id="bars-days"></div>
+  </div>
+
+  <div class="card">
+    <h3>Тяга по часам</h3>
+    <p>Ваши самые опасные часы — планируйте на них занятие.</p>
+    <div class="bars" id="bars-hours"></div>
+  </div>
+
+  <div class="card">
+    <h3>Личные данные</h3>
+    <div class="row2">
+      <div class="field"><label>Сигарет в день</label><input type="number" id="cfg-perday" min="1" max="100" inputmode="numeric"></div>
+      <div class="field"><label>Цена пачки, ₽</label><input type="number" id="cfg-pack" min="1" inputmode="numeric"></div>
+    </div>
+    <div class="field"><label>Дата отказа</label><input type="date" id="cfg-date"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary btn-sm" onclick="saveConfig()">Сохранить</button>
+      <button class="btn btn-ghost btn-sm" onclick="confirmRelapseOpen()">Я сорвался</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Метод: подготовка к отказу</h3>
+    <div class="method-step"><b>1. Наблюдение (2–3 дня)</b><span>Отмечайте каждую сигарету в дневнике: время, сила, ситуация. Увидите 3–5 повторяющихся — это ваши триггеры.</span></div>
+    <div class="method-step"><b>2. Замена на каждый триггер</b><span>Кофе → выйти без пачки. Машина → вода и жвачка в подстаканнике. Стресс → дыхание 4–7–8. Перекур → выйти с чаем.</span></div>
+    <div class="method-step"><b>3. День отказа</b><span>Уберите пачки, зажигалки, пепельницы. Скажите близким. Займите день делами. Поставьте дату в приложении.</span></div>
+    <div class="method-step" style="margin-bottom:0"><b>4. Первые две недели</b><span>Самый тяжёлый период. Кнопка SOS вместо сигареты, много воды, больше движения, ранний сон.</span></div>
+  </div>
+
+  <div class="card">
+    <p class="hint" style="font-size:12.5px;line-height:1.6">
+      Приложение помогает вести дневник и отслеживать прогресс. Оно не является медицинским
+      средством и не заменяет консультацию врача. При выраженной никотиновой зависимости
+      обсудите с терапевтом никотинзаместительную терапию и поддержку специалиста.
+    </p>
+  </div>
+</section>
+
+</main>
+
+<nav class="tabbar">
+  <button data-view="v-progress" class="active">
+    <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M12 12V3"/></svg>Прогресс
+  </button>
+  <button data-view="v-sos">
+    <svg viewBox="0 0 24 24"><path d="M12 21s-7-4.6-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.4-7 10-7 10z"/></svg>SOS
+  </button>
+  <button data-view="v-log">
+    <svg viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>Дневник
+  </button>
+  <button data-view="v-money">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h5M9.5 14.5h5"/></svg>Деньги
+  </button>
+  <button data-view="v-stats">
+    <svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Статистика
+  </button>
+</nav>
+
+<!-- ============ Онбординг ============ -->
+<div class="sheet" id="onboard">
+  <div class="sheet-inner">
+    <div class="steps-bar" id="ob-bar"><i></i><i></i><i></i><i></i></div>
+
+    <div class="ob-page" data-page="0">
+      <h2>Сколько вы курите?</h2>
+      <p class="sub">Нужно, чтобы считать прогресс и экономию.</p>
+      <div class="row2">
+        <div class="field"><label>Сигарет в день</label><input type="number" id="ob-perday" value="15" min="1" max="100" inputmode="numeric"></div>
+        <div class="field"><label>Цена пачки, ₽</label><input type="number" id="ob-pack" value="180" min="1" inputmode="numeric"></div>
+      </div>
+    </div>
+
+    <div class="ob-page" data-page="1" hidden>
+      <h2>Что вас провоцирует?</h2>
+      <p class="sub">Отметьте всё, что узнаёте. На каждый будет готовый ответ.</p>
+      <div class="chips" id="ob-triggers" style="margin:0"></div>
+    </div>
+
+    <div class="ob-page" data-page="2" hidden>
+      <h2>Когда день отказа?</h2>
+      <p class="sub">Если уже не курите — укажите день, когда бросили.</p>
+      <div class="field"><label>Дата</label><input type="date" id="ob-date"></div>
+      <p class="hint">Совет: дайте себе 3–7 дней на подготовку. Бросать «прямо сейчас» на эмоциях — работает хуже.</p>
+    </div>
+
+    <div class="ob-page" data-page="3" hidden>
+      <h2>Ваш план готов</h2>
+      <p class="sub" id="ob-summary"></p>
+      <div class="note" id="ob-plan"></div>
+    </div>
+
+    <div class="ob-actions">
+      <button class="btn btn-ghost" id="ob-back" onclick="obBack()" style="visibility:hidden">Назад</button>
+      <button class="btn btn-primary" id="ob-next" onclick="obNext()">Далее</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Срыв ============ -->
+<div class="sheet" id="relapse">
+  <div class="sheet-inner">
+    <h2>Одна сигарета — не конец</h2>
+    <p class="sub">Разберём, что произошло. Так эпизод станет данными, а не поражением.</p>
+    <div class="field">
+      <label>Что было перед этим?</label>
+      <input type="text" id="rel-ctx" placeholder="Выпил, сильно устал, поссорился...">
+    </div>
+    <div class="field">
+      <label>Как себя чувствуете?</label>
+      <select id="rel-feel">
+        <option>Виню себя, хочу всё бросить</option>
+        <option>Разочарован, но готов продолжать</option>
+        <option>Ничего страшного, продолжаю</option>
+      </select>
+    </div>
+    <div class="note">Прогресс <b>не обнуляется</b>: дни без сигарет, экономия и записи остаются. Сосчитайте, чего не хватило в этом моменте — и добавьте ответ на этот триггер.</div>
+    <div class="ob-actions">
+      <button class="btn btn-ghost" onclick="closeSheet('relapse')">Отмена</button>
+      <button class="btn btn-warn" onclick="confirmRelapse()">Продолжить</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ============================================================
+   СВОБОДА — Telegram Mini App
+   Хранение: Telegram CloudStorage (синхронизация между устройствами),
+   с откатом на localStorage вне Telegram.
+   ============================================================ */
+
+const tg = window.Telegram?.WebApp || null;
+const IS_TG = !!(tg && tg.initData !== undefined && tg.platform && tg.platform !== 'unknown');
+
+/* ---------- константы ---------- */
+const CIGS_PER_PACK = 20;
+const MINUTES_PER_CIG = 11;
+
+const TRIGGERS = [
+  {id:'coffee',    name:'☕ Кофе',        advice:'Пейте в другом месте или стоя. Первые две недели замените на чай — связка «кофе → сигарета» держится крепче всего.'},
+  {id:'car',       name:'🚗 Машина',      advice:'Уберите пепельницу и зажигалку. В подстаканник — воду и жвачку. Рука потянется туда, где раньше лежала пачка.'},
+  {id:'colleagues',name:'💼 Перекур',     advice:'Всё равно выходите — но с чаем. Социальная часть ритуала вам нужнее никотина.'},
+  {id:'stress',    name:'😰 Стресс',      advice:'Дыхание 4–7–8 плюс 10 приседаний. Никотин стресс не снимает — он откладывает его на 30 минут.'},
+  {id:'alcohol',   name:'🍷 Алкоголь',    advice:'В первый месяц сильно ограничьте. Одна выпивка снимает тормоза — это самый частый путь к срыву.'},
+  {id:'meal',      name:'🍽 После еды',   advice:'Вставайте сразу и чистите зубы или жуйте жвачку. Ломайте весь ритуал, а не только сигарету.'},
+  {id:'phone',     name:'📱 Разговор',    advice:'Говорите на ходу. Занятые руки и движение съедают тягу за пару минут.'},
+  {id:'boredom',   name:'😐 Скука',       advice:'Держите список из пяти дел «на пять минут». Скука — самый недооценённый триггер.'}
+];
+
+const HEALTH = [
+  {h:1/3,      t:'20 минут',  d:'Пульс и давление возвращаются к норме'},
+  {h:8,        t:'8 часов',   d:'Угарный газ в крови падает вдвое, тканям возвращается кислород'},
+  {h:24,       t:'24 часа',   d:'Организм очищен от угарного газа, риск инфаркта начинает снижаться'},
+  {h:48,       t:'48 часов',  d:'Восстанавливаются вкус и обоняние, никотин выведен полностью'},
+  {h:72,       t:'72 часа',   d:'Дышать легче — бронхи расслаблены. Пик физической тяги'},
+  {h:24*14,    t:'2 недели',  d:'Улучшается кровообращение, ходить и тренироваться заметно проще'},
+  {h:24*30,    t:'1 месяц',   d:'Кашель и одышка уходят, функция лёгких растёт примерно на 30%'},
+  {h:24*90,    t:'3 месяца',  d:'Объём лёгких прибавляется, энергия возвращается'},
+  {h:24*365,   t:'1 год',     d:'Риск коронарной болезни примерно вдвое ниже, чем у курящего'},
+  {h:24*365*5, t:'5 лет',     d:'Риск инсульта — как у некурящих'},
+  {h:24*365*10,t:'10 лет',    d:'Риск рака лёгкого примерно вдвое ниже, чем у курящего'},
+  {h:24*365*15,t:'15 лет',    d:'Риск болезней сердца близок к уровню тех, кто никогда не курил'}
+];
+
+const DEFAULT_STATE = {
+  perday:15, pack:180, triggers:[], quitDate:null,
+  logs:[], wishes:[], relapses:[], onboarded:false
+};
+
+let S = {...DEFAULT_STATE};
+
+/* ============================================================
+   ХРАНИЛИЩЕ
+   ============================================================ */
+const CHUNK = 3500;  // лимит CloudStorage на ключ — 4096 байт, берём с запасом
+
+function csSet(key, val){
+  return new Promise((res, rej) => tg.CloudStorage.setItem(key, val, (e,ok) => e ? rej(e) : res(ok)));
+}
+function csGet(key){
+  return new Promise((res, rej) => tg.CloudStorage.getItem(key, (e,v) => e ? rej(e) : res(v)));
+}
+
+async function cloudSave(state){
+  const json = JSON.stringify(state);
+  const parts = [];
+  for(let i = 0; i < json.length; i += CHUNK) parts.push(json.slice(i, i + CHUNK));
+  // сначала пишем части, потом счётчик — если оборвётся, старый счётчик останется валидным
+  for(let i = 0; i < parts.length; i++) await csSet('s'+i, parts[i]);
+  await csSet('nchunks', String(parts.length));
+  return true;
+}
+
+async function cloudLoad(){
+  const nRaw = await csGet('nchunks');
+  const n = parseInt(nRaw || '0', 10);
+  if(!n || n > 60) return null;
+  let json = '';
+  for(let i = 0; i < n; i++){
+    const part = await csGet('s'+i);
+    if(part === null || part === undefined) return null;
+    json += part;
+  }
+  try{ return JSON.parse(json); }catch(e){ return null; }
+}
+
+let saveTimer = null;
+function trimState(){
+  // CloudStorage: 1024 ключа по 4096 байт. Держим объём предсказуемым.
+  if(S.logs.length > 400)     S.logs = S.logs.slice(-400);
+  if(S.relapses.length > 200) S.relapses = S.relapses.slice(-200);
+  if(S.wishes.length > 40)    S.wishes = S.wishes.slice(-40);
+}
+function save(){
+  trimState();
+  if(IS_TG){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => { cloudSave(S).catch(() => {}); }, 400);
+  }else{
+    try{ localStorage.setItem('svoboda_tg', JSON.stringify(S)); }catch(e){}
+  }
+}
+
+async function loadState(){
+  if(IS_TG){
+    try{
+      const remote = await cloudLoad();
+      if(remote) return {...DEFAULT_STATE, ...remote};
+    }catch(e){}
+    return {...DEFAULT_STATE};
+  }
+  try{
+    const raw = localStorage.getItem('svoboda_tg');
+    return raw ? {...DEFAULT_STATE, ...JSON.parse(raw)} : {...DEFAULT_STATE};
+  }catch(e){ return {...DEFAULT_STATE}; }
+}
+
+/* ============================================================
+   TELEGRAM: тема, хаптика, кнопки
+   ============================================================ */
+function initTelegram(){
+  if(!tg) return;
+  try{ tg.ready(); }catch(e){}
+  try{ tg.expand(); }catch(e){}
+  try{ tg.disableVerticalSwipes?.(); }catch(e){}
+  try{ tg.enableClosingConfirmation?.(); }catch(e){}
+  try{ tg.setHeaderColor?.('#0b1220'); }catch(e){}
+  try{ tg.setBackgroundColor?.('#0b1220'); }catch(e){}
+  try{ tg.setBottomBarColor?.('#0d1422'); }catch(e){}
+
+  const u = tg.initDataUnsafe?.user;
+  if(u?.first_name){
+    document.getElementById('brand-name').textContent = 'Свобода, ' + u.first_name;
+  }
+}
+function haptic(type){
+  if(!tg?.HapticFeedback) return;
+  try{
+    if(type === 'ok')   tg.HapticFeedback.notificationOccurred('success');
+    if(type === 'warn') tg.HapticFeedback.notificationOccurred('warning');
+    if(type === 'err')  tg.HapticFeedback.notificationOccurred('error');
+    if(type === 'tap')  tg.HapticFeedback.impactOccurred('light');
+    if(type === 'mid')  tg.HapticFeedback.impactOccurred('medium');
+  }catch(e){}
+}
+
+/* ---------- BackButton ---------- */
+function syncBackButton(open){
+  if(!tg?.BackButton) return;
+  try{
+    if(open){ tg.BackButton.show(); }else{ tg.BackButton.hide(); }
+  }catch(e){}
+}
+
+/* ============================================================
+   УТИЛИТЫ
+   ============================================================ */
+const $  = id => document.getElementById(id);
+const pad = n => String(n).padStart(2,'0');
+const fmtMoney = n => Math.floor(n).toLocaleString('ru-RU') + ' ₽';
+const fmtNum   = n => Math.floor(n).toLocaleString('ru-RU');
+function plural(n, one, few, many){
+  const a = Math.abs(n) % 100, b = a % 10;
+  if(a > 10 && a < 20) return many;
+  if(b > 1 && b < 5) return few;
+  if(b === 1) return one;
+  return many;
+}
+function toast(msg, type){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  haptic(type || 'tap');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 2400);
+}
+function openSheet(id){ $(id).classList.add('open'); syncBackButton(true); }
+function closeSheet(id){
+  $(id).classList.remove('open');
+  const anyOpen = document.querySelector('.sheet.open');
+  syncBackButton(!!anyOpen);
+  if(anyOpen) syncBackButton(true);
+}
+
+/* ============================================================
+   НАВИГАЦИЯ
+   ============================================================ */
+const VIEW_TITLES = {
+  'v-progress':'Прогресс', 'v-sos':'SOS', 'v-log':'Дневник',
+  'v-money':'Деньги', 'v-stats':'Статистика'
+};
+
+document.querySelectorAll('.tabbar button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tabbar button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    btn.classList.add('active');
+    $(btn.dataset.view).classList.add('active');
+    haptic('tap');
+    window.scrollTo({top:0, behavior:'smooth'});
+    renderAll();
+  });
+});
+
+/* ============================================================
+   ОНБОРДИНГ
+   ============================================================ */
+let obPage = 0;
+
+function openOnboarding(){
+  obPage = 0;
+  $('ob-perday').value = S.perday;
+  $('ob-pack').value   = S.pack;
+  if(!$('ob-date').value){
+    const t = new Date();
+    $('ob-date').value = `${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())}`;
+  }
+  $('ob-date').value = S.quitDate ? S.quitDate.slice(0,10) : $('ob-date').value;
+  renderChips('ob-triggers', S.triggers);
+  showObPage();
+  openSheet('onboard');
+}
+function showObPage(){
+  document.querySelectorAll('.ob-page').forEach(p => { p.hidden = +p.dataset.page !== obPage; });
+  document.querySelectorAll('#ob-bar i').forEach((d,i) => d.classList.toggle('on', i <= obPage));
+  $('ob-back').style.visibility = obPage === 0 ? 'hidden' : 'visible';
+  $('ob-next').textContent = obPage === 3 ? 'Начать' : 'Далее';
+  if(obPage === 3) renderSummary();
+}
+function obNext(){
+  haptic('tap');
+  if(obPage < 3){ collectOb(); obPage++; showObPage(); return; }
+  collectOb();
+  if(!S.quitDate){ toast('Укажите дату отказа', 'err'); obPage = 2; showObPage(); return; }
+  S.onboarded = true;
+  save(); closeSheet('onboard');
+  toast('План сохранён', 'ok');
+  renderAll();
+}
+function obBack(){ if(obPage > 0){ obPage--; showObPage(); haptic('tap'); } }
+
+function collectOb(){
+  S.perday = Math.max(1, +$('ob-perday').value || 1);
+  S.pack   = Math.max(1, +$('ob-pack').value   || 1);
+  S.triggers = selectedChips('ob-triggers');
+  const d = $('ob-date').value;
+  if(d) S.quitDate = d + 'T07:00:00';
+  save();
+}
+function renderSummary(){
+  collectOb();
+  const start = S.quitDate ? new Date(S.quitDate) : null;
+  const planned = start && start.getTime() > Date.now();
+  const yearMoney = S.perday * 365 / CIGS_PER_PACK * S.pack;
+  let txt = planned
+    ? `Отказ запланирован на ${start.toLocaleDateString('ru-RU')}. `
+    : (start ? `Отсчёт идёт с ${start.toLocaleDateString('ru-RU')}. ` : '');
+  txt += `При ${S.perday} ${plural(S.perday,'сигарете','сигаретах','сигаретах')} в день это примерно ${fmtMoney(yearMoney)} за год.`;
+  $('ob-summary').textContent = txt;
+
+  const sel = S.triggers.map(id => TRIGGERS.find(t => t.id === id)).filter(Boolean);
+  $('ob-plan').innerHTML = sel.length
+    ? '<b>Ответы на ваши триггеры:</b><ul class="tick">'
+      + sel.map(t => `<li><b>${t.name}</b> — ${t.advice}</li>`).join('') + '</ul>'
+    : 'Триггеры не отмечены — вернитесь на шаг назад, это ключевая часть плана.';
+}
+
+/* ---------- чипсы ---------- */
+function renderChips(containerId, selected){
+  const box = $(containerId);
+  box.innerHTML = TRIGGERS.map(t =>
+    `<button class="chip-btn${selected.includes(t.id) ? ' on' : ''}" data-id="${t.id}">${t.name}</button>`
+  ).join('');
+  box.querySelectorAll('.chip-btn').forEach(b => {
+    b.addEventListener('click', ev => {
+      ev.preventDefault();
+      b.classList.toggle('on');
+      haptic('tap');
+      if(containerId === 'trigger-chips'){
+        S.triggers = selectedChips('trigger-chips');
+        save(); renderAdvice(); renderStats();
+      }
+    });
+  });
+}
+function selectedChips(id){ return [...$(id).querySelectorAll('.chip-btn.on')].map(b => b.dataset.id); }
+function renderAdvice(){
+  const sel = S.triggers.map(id => TRIGGERS.find(t => t.id === id)).filter(Boolean);
+  $('trigger-advice').innerHTML = sel.length
+    ? sel.map(t => `<div class="note"><b>${t.name}</b><br>${t.advice}</div>`).join('')
+    : '<div class="note">Отметьте триггеры выше — на каждый появится готовый ответ.</div>';
+}
+
+/* ============================================================
+   СЧЁТЧИК
+   ============================================================ */
+function elapsedMs(){
+  if(!S.quitDate) return 0;
+  return Math.max(0, Date.now() - new Date(S.quitDate).getTime());
+}
+function stats(){
+  const ms = elapsedMs();
+  const days = ms / 86400000;
+  const cigs = days * S.perday;
+  return {ms, days, cigs, money: cigs / CIGS_PER_PACK * S.pack, lifeH: cigs * MINUTES_PER_CIG / 60};
+}
+function streakDays(){
+  if(!S.relapses.length) return Math.floor(stats().days);
+  const last = S.relapses.map(r => new Date(r.ts)).sort((a,b) => b - a)[0];
+  return Math.max(0, Math.floor((Date.now() - last.getTime()) / 86400000));
+}
+
+function tick(){
+  const el = $('c-live');
+  if(!S.quitDate){ el.textContent = 'Настройте план'; $('c-caption').textContent = 'нажмите сюда'; return; }
+
+  const start = new Date(S.quitDate).getTime();
+  if(start > Date.now()){
+    const left = start - Date.now();
+    const d = Math.floor(left/86400000), h = Math.floor(left%86400000/3600000), m = Math.floor(left%3600000/60000);
+    el.textContent = `${d} д ${pad(h)}:${pad(m)}`;
+    $('c-caption').textContent = 'осталось до отказа';
+    return;
+  }
+  const s = stats();
+  const d = Math.floor(s.ms/86400000);
+  const h = Math.floor(s.ms%86400000/3600000);
+  const m = Math.floor(s.ms%3600000/60000);
+  const sec = Math.floor(s.ms%60000/1000);
+  el.textContent = `${d} д ${pad(h)}:${pad(m)}:${pad(sec)}`;
+  $('c-caption').textContent = 'без сигарет';
+}
+
+function renderCounter(){
+  const s = stats();
+  $('c-cigs').textContent  = fmtNum(s.cigs);
+  $('c-money').textContent = fmtMoney(s.money);
+  $('c-life').textContent  = s.lifeH >= 24 ? (s.lifeH/24).toFixed(1) + ' дн' : Math.floor(s.lifeH) + ' ч';
+  $('c-streak').textContent = streakDays();
+
+  const hours = s.ms / 3600000;
+  $('timeline').innerHTML = HEALTH.map(h => {
+    const done = hours >= h.h;
+    return `<div class="tl-item${done ? ' done' : ''}">
+      <div class="tl-mark">✓</div>
+      <div class="tl-body"><b>${h.t}</b><span>${h.d}</span></div>
+    </div>`;
+  }).join('');
+
+  // «коэффициент» в шапке
+  const q = $('quotient');
+  if(S.quitDate && hours > 0){
+    q.style.display = '';
+    q.textContent = Math.floor(s.days) + ' ' + plural(Math.floor(s.days),'день','дня','дней');
+  }
+}
+
+/* ============================================================
+   ДЫХАНИЕ 4–7–8
+   ============================================================ */
+const PHASES = [
+  {name:'Вдох носом', sec:4, cls:'inhale'},
+  {name:'Задержка',   sec:7, cls:''},
+  {name:'Выдох ртом', sec:8, cls:'exhale'}
+];
+let breathOn = false, breathTimer = null, phaseIdx = 0, phaseLeft = 0, totalLeft = 0;
+
+function toggleBreath(){ breathOn ? stopBreath() : startBreath(); }
+
+function startBreath(){
+  breathOn = true;
+  haptic('mid');
+  $('breath-btn').textContent = 'Остановить';
+  totalLeft = 300; phaseIdx = 0; phaseLeft = PHASES[0].sec;
+  renderPhase();
+  breathTimer = setInterval(() => {
+    phaseLeft--; totalLeft--;
+    if(phaseLeft <= 0){
+      phaseIdx = (phaseIdx + 1) % PHASES.length;
+      phaseLeft = PHASES[phaseIdx].sec;
+      renderPhase();
+    }
+    $('breath-count').textContent = totalLeft;
+    $('breath-phase').textContent = PHASES[phaseIdx].name + ' · ' + PHASES[phaseIdx].sec;
+    if(totalLeft <= 0){
+      stopBreath();
+      haptic('ok');
+      toast('Пять минут прошли. Тяга отпустила?');
+    }
+  }, 1000);
+}
+function renderPhase(){
+  const p = PHASES[phaseIdx], el = $('breath');
+  el.classList.remove('inhale','exhale');
+  if(p.cls) el.classList.add(p.cls);
+  $('breath-phase').textContent = p.name + ' · ' + p.sec;
+}
+function stopBreath(){
+  breathOn = false;
+  clearInterval(breathTimer);
+  $('breath-btn').textContent = 'Начать дыхание';
+  $('breath').classList.remove('inhale','exhale');
+  $('breath-phase').textContent = 'Начать';
+  $('breath-count').textContent = '‹';
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const bb = $('breath-btn');
+  if(bb) bb.addEventListener('click', toggleBreath);
+});
+
+function saveCraving(intensity){
+  S.logs.push({
+    ts: new Date().toISOString(),
+    context: 'Кнопка SOS',
+    intensity,
+    method: 'Дыхание 4–7–8',
+    smoked: intensity === 3
+  });
+  if(intensity === 3) S.relapses.push({ts:new Date().toISOString(), note:'кнопка SOS'});
+  save(); stopBreath();
+  if(intensity === 3){
+    haptic('warn');
+    toast('Записано. Прогресс сохранён — вы продолжаете');
+  }else{
+    haptic('ok');
+    toast('Молодцом! Эпизод записан');
+  }
+  renderAll();
+}
+
+/* ============================================================
+   ДНЕВНИК
+   ============================================================ */
+let logIntensity = 2;
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('#intensity-chips .chip-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#intensity-chips .chip-btn').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      logIntensity = +b.dataset.i;
+      haptic('tap');
+    });
+  });
+});
+
+function addLog(){
+  const ctx = $('log-context').value.trim();
+  S.logs.push({
+    ts: new Date().toISOString(),
+    context: ctx || '—',
+    intensity: logIntensity,
+    method: $('log-method').value,
+    smoked: $('log-method').value.includes('не смог')
+  });
+  save();
+  $('log-context').value = '';
+  haptic('ok');
+  toast('Запись добавлена');
+  renderAll();
+}
+
+function renderLog(){
+  const logs = [...S.logs].sort((a,b) => new Date(b.ts) - new Date(a.ts));
+  if(!logs.length){
+    $('log-area').innerHTML = '<div class="empty">Записей пока нет.<br>Первая запись — во вкладке SOS.</div>';
+    return;
+  }
+  $('log-area').innerHTML = logs.slice(0, 50).map(l => {
+    const d = new Date(l.ts);
+    const when = `${pad(d.getDate())}.${pad(d.getMonth()+1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const lvl = ['','слабо','средне','сильно'][l.intensity] || '';
+    return `<div class="log-item">
+      <div class="t">${when}</div>
+      <div class="b"><b>${l.context}</b><span>${lvl} · ${l.method}</span></div>
+      <div class="pill ${l.smoked ? 'bad' : 'ok'}">${l.smoked ? 'срыв' : 'пережил'}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ============================================================
+   СРЫВ
+   ============================================================ */
+function confirmRelapseOpen(){ openSheet('relapse'); }
+function confirmRelapse(){
+  const ctx = $('rel-ctx').value.trim() || 'без описания';
+  S.relapses.push({ts:new Date().toISOString(), context:ctx, feel:$('rel-feel').value});
+  S.logs.push({ts:new Date().toISOString(), context:ctx, intensity:3, method:'Срыв', smoked:true});
+  save(); closeSheet('relapse');
+  $('rel-ctx').value = '';
+  haptic('warn');
+  toast('Сохранено. Прогресс не обнулён');
+  renderAll();
+}
+
+/* ============================================================
+   ДЕНЬГИ
+   ============================================================ */
+function addWish(){
+  const name = $('wish-name').value.trim();
+  const price = +$('wish-price').value;
+  if(!name || !price){ haptic('err'); toast('Заполните название и цену'); return; }
+  S.wishes.push({name, price});
+  save();
+  $('wish-name').value = ''; $('wish-price').value = '';
+  haptic('ok'); toast('Цель добавлена');
+  renderMoney();
+}
+function renderMoney(){
+  const s = stats();
+  $('m-saved').textContent = fmtMoney(s.money);
+  $('m-cigs').textContent  = fmtNum(s.cigs);
+
+  $('wishlist').innerHTML = S.wishes.length
+    ? S.wishes.map(w => {
+        const ok = s.money >= w.price;
+        const pct = Math.min(100, Math.round(s.money / w.price * 100));
+        return `<div class="wish${ok ? ' afford' : ''}">
+          <div style="flex:1;min-width:0">
+            <b>${w.name}</b>
+            <div class="meta">${ok ? '✓ можно купить сейчас' : pct + '% накоплено'}</div>
+            <div class="prog"><i style="width:${pct}%"></i></div>
+          </div>
+          <div class="pr">${fmtMoney(w.price)}</div>
+        </div>`;
+      }).join('')
+    : '<div class="empty">Целей пока нет.<br>Наушники за 15 000 ₽ — это примерно два месяца пачки в день.</div>';
+
+  const perDay = S.perday / CIGS_PER_PACK * S.pack;
+  const rows = [
+    ['В день', perDay], ['В неделю', perDay*7], ['В месяц', perDay*30],
+    ['В год', perDay*365], ['За 5 лет', perDay*365*5], ['За 10 лет', perDay*365*10]
+  ];
+  $('money-rows').innerHTML = rows.map(r =>
+    `<div class="money-row"><span>${r[0]}</span><span>${fmtMoney(r[1])}</span></div>`
+  ).join('') + `<p class="hint">Из расчёта: ${S.perday} ${plural(S.perday,'сигарета','сигареты','сигарет')} в день, пачка ${fmtMoney(S.pack)}.</p>`;
+}
+
+/* ============================================================
+   СТАТИСТИКА
+   ============================================================ */
+function renderStats(){
+  const logs = S.logs;
+  $('s-total').textContent = logs.length;
+  $('s-won').textContent = logs.length
+    ? Math.round(logs.filter(l => !l.smoked).length / logs.length * 100) + '%' : '—';
+
+  // по дням (7 дней — узкий экран)
+  const days = [];
+  for(let i = 6; i >= 0; i--){
+    const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - i);
+    const nx = new Date(d); nx.setDate(nx.getDate() + 1);
+    const inDay = logs.filter(l => { const t = new Date(l.ts); return t >= d && t < nx; });
+    days.push({lbl: pad(d.getDate())+'.'+pad(d.getMonth()+1), count: inDay.length, smoked: inDay.some(l => l.smoked)});
+  }
+  renderBars($('bars-days'), days);
+
+  // по часам
+  const buckets = [[0,'0-3'],[3,'3-6'],[6,'6-9'],[9,'9-12'],[12,'12-15'],[15,'15-18'],[18,'18-21'],[21,'21-24']];
+  const hours = buckets.map(b => ({
+    lbl: b[1],
+    count: logs.filter(l => { const h = new Date(l.ts).getHours(); return h >= b[0] && h < b[0]+3; }).length
+  }));
+  renderBars($('bars-hours'), hours);
+
+  const maxH = hours.reduce((a,b) => b.count > a.count ? b : a, hours[0]);
+  $('s-risk').textContent = maxH.count > 0 ? maxH.lbl : '—';
+
+  // главный триггер — по тексту контекста
+  const ctxCount = {};
+  logs.forEach(l => {
+    const c = (l.context || '').toLowerCase().trim();
+    if(c && c !== '—' && c !== 'кнопка sos' && c !== 'без описания') ctxCount[c] = (ctxCount[c] || 0) + 1;
+  });
+  const top = Object.entries(ctxCount).sort((a,b) => b[1] - a[1])[0];
+  const el = $('s-trig');
+  el.textContent = top ? (top[0].length > 12 ? top[0].slice(0,12) + '…' : top[0]) : '—';
+  el.style.fontSize = top ? '14px' : '21px';
+}
+
+function renderBars(el, data){
+  const max = Math.max(1, ...data.map(d => d.count));
+  el.innerHTML = data.map(d => {
+    const h = Math.round(d.count / max * 100);
+    return `<div class="bar-col">
+      <div class="bar" style="height:${d.count ? Math.max(h,5) : 3}%;background:${d.smoked
+        ? 'linear-gradient(180deg,#f87171,#b91c1c)'
+        : 'linear-gradient(180deg,#2dd4bf,#0f766e)'}"></div>
+      <div class="bar-lbl">${d.lbl}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ============================================================
+   НАСТРОЙКИ
+   ============================================================ */
+function renderConfig(){
+  $('cfg-perday').value = S.perday;
+  $('cfg-pack').value   = S.pack;
+  $('cfg-date').value   = S.quitDate ? S.quitDate.slice(0,10) : '';
+}
+function saveConfig(){
+  S.perday = Math.max(1, +$('cfg-perday').value || 1);
+  S.pack   = Math.max(1, +$('cfg-pack').value   || 1);
+  const d = $('cfg-date').value;
+  if(d) S.quitDate = d + 'T07:00:00';
+  save(); haptic('ok'); toast('Настройки сохранены');
+  renderAll();
+}
+
+/* ============================================================
+   ПОДЕЛИТЬСЯ
+   ============================================================ */
+function share(){
+  const s = stats();
+  const days = Math.floor(s.days);
+  const text = S.quitDate && days >= 0
+    ? `Я не курю ${days} ${plural(days,'день','дня','дней')} и уже вернул ${fmtMoney(s.money)}. Присоединяйся!`
+    : 'Бросаю курить с помощью «Свободы». Присоединяйся!';
+  haptic('tap');
+  if(!tg){ toast('Скопируйте: ' + text); return; }
+  try{
+    if(tg.openTelegramLink){
+      const app = tg.initDataUnsafe?.chat?.username || '';
+      const url = 'https://t.me/share/url?url=' + encodeURIComponent('https://t.me/' + (app || '')) + '&text=' + encodeURIComponent(text);
+      tg.openTelegramLink(url);
+    }
+  }catch(e){ toast('Не удалось поделиться'); }
+}
+
+/* ============================================================
+   ОБЩИЙ РЕНДЕР
+   ============================================================ */
+function renderAll(){
+  renderCounter(); renderMoney(); renderStats(); renderLog(); renderAdvice(); renderConfig();
+}
+
+/* ============================================================
+   СТАРТ
+   ============================================================ */
+(async function boot(){
+  initTelegram();
+  S = await loadState();
+
+  $('brand-name').textContent = tg?.initDataUnsafe?.user?.first_name
+    ? 'Свобода, ' + tg.initDataUnsafe.user.first_name
+    : 'Свобода';
+
+  renderChips('ob-triggers', S.triggers);
+  renderChips('trigger-chips', S.triggers);
+  renderAll();
+  tick();
+  setInterval(tick, 1000);
+
+  $('btn-share').addEventListener('click', share);
+
+  // клик по счётчику — открыть настройку
+  $('c-live').parentElement.style.cursor = 'pointer';
+  $('c-live').parentElement.addEventListener('click', () => { haptic('tap'); openOnboarding(); });
+
+  // закрытие шторок по фону
+  ['onboard','relapse'].forEach(id => {
+    $(id).addEventListener('click', e => { if(e.target.id === id) closeSheet(id); });
+  });
+
+  // физическая кнопка «Назад» в Telegram
+  tg?.BackButton?.onClick(() => {
+    const open = document.querySelector('.sheet.open');
+    if(open) closeSheet(open.id);
+  });
+
+  $('boot').style.display = 'none';
+
+  // первый заход — сразу онбординг
+  if(!S.onboarded){
+    setTimeout(() => { if(!S.onboarded) openOnboarding(); }, 500);
+  }
+})();
+</script>
+
+</body>
+</html>
